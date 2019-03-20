@@ -27,19 +27,15 @@ Create the vcf file as above, then create a bed file `working_dir/locs.bed`. The
 ```
 Features = ['deepsea', 'deepbind', 'epigenetic', '5mer', 'encode_matrix', 'fimo_summary', 'polyA_polyT_GC', 'dna_shape', 'conservation', 'anonymize_tf', 'closest_gene', 'intron_exon_promoter']
 
-generate_features(Features, example_dir + '/', max_num_threads=10, cell_type='hepg2', vcf_sequence_length=300)
+generate_features(Features, example_dir + '/', max_num_threads=10, cell_type='hepg2')
 ```
 
 ### Modified sequences corresponding to hg19 coordinates
-Create the vcf file as above. Create the bed file if coordinates are different length. Create an additional fasta file `working_dir/locs.fasta`. The format is
-```
->name
-ACGTACGT
-```
+Create the vcf file as above, but replace the `alt` column with your desired modification in sequence. Create the bed file if coordinates are different length, otherwise use the `vcf_sequence_length` argument.
 
 ```
 Features = ['deepsea', 'deepbind', 'epigenetic', '5mer', 'encode_matrix', 'fimo_summary', 'polyA_polyT_GC', 'dna_shape', 'conservation', 'anonymize_tf', 'closest_gene', 'intron_exon_promoter']
 
-generate_features(Features, example_dir + '/', max_num_threads=10, cell_type='hepg2', vcf_sequence_length=300)
+generate_features(Features, example_dir + '/', max_num_threads=10, cell_type='hepg2')
 ```
 
