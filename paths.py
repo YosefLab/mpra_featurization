@@ -7,10 +7,11 @@ Cmd_big_wig_average = '/data/yosef2/users/zxyan/programs/bin/bigWigAverageOverBe
 
 # Large file paths
 Genome = '/data/yosef/index_files/hg19/genome/hg19.fa'
-Phylo_annotations = '/data/yosef2/users/zxyan/anat/resources/hg19.100way.phyloP100way.bw'
 
 # Project subpaths for convenience
-Resources = '/data/yosef2/users/zxyan/cagi5/paper/resources/'
+Resources = '/data/yosef2/users/zxyan/featurizer/resources/'
+
+Phylo_annotations = Resources + '/hg19.100way.phyloP100way.bw'
 
 # Files in project subpaths
 Chrom_sizes = Resources + 'hg19.chrom.sizes.txt'
@@ -21,3 +22,8 @@ Motif_files = {
     'hg19' : Resources + 'hg19_motifs.meme'
 }
 Epi_annotations = Resources + 'all_annotations.tab'
+Gene_expressions = Resources + 'gene_expressions/'
+Genes = Resources + 'hgTables_genes.tab'
+Exons = Resources + 'hgTables_exons.bed'
+Introns = Resources + 'hgTables_introns.bed'
+Promoters = Resources + 'hgTables_tx_-2500_500.bed'
