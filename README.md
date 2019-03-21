@@ -31,7 +31,7 @@ generate_features(Features, example_dir + '/', max_num_threads=10, cell_type='he
 ```
 
 ### Modified sequences corresponding to hg19 coordinates
-Create the vcf file as above, but replace the `alt` column with your desired modification in sequence. Create the bed file if coordinates are different length, otherwise use the `vcf_sequence_length` argument.
+Create the vcf file as above, but replace the `alt` column with your desired modification in sequence. Note that this only lets you modify the sequence in the middle (since that's where `pos` in the vcf points to). Create the bed file if coordinates are different length, otherwise use the `vcf_sequence_length` argument.
 
 ```
 Features = ['deepsea', 'deepbind', 'epigenetic', '5mer', 'encode_matrix', 'fimo_summary', 'polyA_polyT_GC', 'dna_shape', 'conservation', 'anonymize_tf', 'closest_gene', 'intron_exon_promoter']
