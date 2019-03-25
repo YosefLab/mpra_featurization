@@ -40,7 +40,7 @@ def save_json(dict_, path):
         json.dump(dict_, codecs.getwriter('utf-8')(f), indent=4, sort_keys=True)
 
 def load_text(path):
-    with open(path, 'r+') as f:
+    with open(path, 'r') as f:
         return f.read()
 
 def save_text(string, path):
@@ -167,7 +167,7 @@ def merge_sequences(ref_seq, alt_seq, alt_offset):
 
 def read_fasta(input_fasta, has_name=False):
     data = []
-    with open(input_fasta, 'r+') as f:
+    with open(input_fasta, 'r') as f:
         line = f.readline()
         while line:
             name = line.rstrip()[1:]
@@ -186,9 +186,9 @@ def read_bed(input_bed):
 
 def read_vcf(input_vcf):
     return pd.read_csv(input_vcf, sep='\t', names=Vcf_header, keep_default_na=False)
-    
+
 def read_header(path, sep=None):
-    with open(path, 'r+') as f:
+    with open(path, 'r') as f:
         return f.readline().rstrip().split(sep)
 
 def write_bed(df, output_bed, columns=Bed_header):
@@ -211,7 +211,7 @@ def bed_df_to_fasta_df(bed_df, columns=Bed_header_name):
     os.remove(temp_bed)
     os.remove(temp_fasta)
     return fasta_df
-    
+
 def bed_to_fasta(bed_path, fasta_path):
     name_flag = ''
     if len(read_header(bed_path, '\t')) > 3:
