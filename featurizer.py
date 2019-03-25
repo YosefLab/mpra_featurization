@@ -11,7 +11,7 @@ def generate_features(features, working_dir, **args):
     vcf = working_dir + 'locs.vcf'
     bed = working_dir + 'locs.bed'
     fasta = working_dir + 'locs.fasta'
-    
+
     # generate bed from vcf / vcf_sequence_length if needed
 
     locs_df = read_vcf(vcf)
@@ -132,11 +132,11 @@ def run_5mer(working_dir, args):
             kmer_counts.append(count_kmers(sequence))
     df = pd.DataFrame(kmer_counts, columns=all_kmers, index=args['locs']['name'])
     df.to_csv(working_dir + '5mer.csv')
-    
+
 def run_deepbind(working_dir, args):
     deepbind_dir = make_dir(working_dir + 'deepbind/')
     locs = args['locs']
-    
+
     name_base = deepbind_dir + 'locs_%s'
     num_splits = split_fasta_(locs, name_base + '.fasta', lambda N: max(1, min(N // 20, args['max_num_threads'])))
     name_bases = [name_base % i for i in range(num_splits)]
@@ -188,10 +188,10 @@ def run_fimo_(working_dir, locs, motif, max_num_threads):
     fimo_df.to_csv(fimo_path, sep='\t', index=False)
     print('finished fimo')
     return fimo_df
-    
+
 def run_encode_matrix(working_dir, args):
     locs = args['locs']
-    with open(Motif_files['encode'], 'r+') as f:
+    with open(Motif_files['encode'], 'r') as f:
         motif_list = [line.rstrip().split(' ')[1] for line in f if line.startswith('MOTIF')]
     motif_df = locs['name'].to_frame().set_index('name')
     for motif in motif_list:
@@ -228,7 +228,7 @@ def find_max_window(starts):
         max_window = max(max_window, i_stop - i_start)
         i_start += 1
     return max_window
-    
+
 def run_fimo_summary(working_dir, args):
     cutoff = 1e-4
     locs = args['locs']
@@ -287,7 +287,7 @@ def run_dna_shape(working_dir, args):
         file_path = list_dir(dna_shape_dir, t)[0]
         names = []
         t_means = []
-        with open(file_path, 'r+') as f:
+        with open(file_path, 'r') as f:
             line = f.readline()
             while line:
                 names.append(line.rstrip()[1:])
@@ -340,7 +340,7 @@ def get_deepbind_annotation():
 
 def get_epigenetic_tf_annotation():
     annotation = pd.DataFrame(columns=['cell_type', 'tf'])
-    with open(Resources + 'encode_tf_annotations.txt', 'r+') as f:
+    with open(Resources + 'encode_tf_annotations.txt', 'r') as f:
         for line in f:
             line = line.rstrip()
             arr = line.split('\t')
@@ -402,7 +402,7 @@ def run_closest_gene(working_dir, args):
     closest_gene = pd.read_csv(great_output_path, sep='\t', skiprows=1, names=['name', 'gene'], index_col='name')
     closest_gene['TPM_closest_gene'] = closest_gene['gene'].apply(lambda g: genes_tpm['TPM_mean'].get(g.split(' ')[0], 0))
     delete_columns(closest_gene, ['gene']).to_csv(working_dir + 'closest_gene.csv', float_format='%.5g')
-    
+
 def run_intron_exon_promoter(working_dir, args):
     eip_dir = make_dir(working_dir + 'intron_exon_promoter/')
     overlap_columns = ('intron', 'exon', 'promoter')
