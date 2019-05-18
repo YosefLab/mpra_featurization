@@ -1,7 +1,7 @@
 import pandas as pd, numpy as np, scipy as sp
 import subprocess, os, requests, re, time, zipfile, io, shutil, string, random, itertools
-from util import *
-from paths import *
+from .util import *
+from .paths import *
 
 ### Data featurization pipeline
 

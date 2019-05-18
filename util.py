@@ -1,7 +1,7 @@
 import numpy as np, pandas as pd
 import subprocess, os, re, time, zipfile, gzip, io, shutil, string, random, itertools, pickle, json, codecs
 
-from paths import *
+from .paths import *
 
 # Constants
 Bed_header = ['chr', 'start', 'end']
