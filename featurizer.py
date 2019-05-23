@@ -3,6 +3,8 @@ import subprocess, os, requests, re, time, zipfile, io, shutil, string, random, 
 from .util import *
 from .paths import *
 
+# Note: any undefined path is probably in paths.py ; any undefined variable is probably in util.py
+
 ### Data featurization pipeline
 
 def generate_features(features, working_dir, **args):
@@ -35,10 +37,18 @@ def generate_features(features, working_dir, **args):
         locs_df['sequence'] = locs_df.apply(lambda row: substitute(row['sequence'], row['pos'] - row['start'] - 1, row['ref'], row['alt']), axis=1)
         write_fasta(locs_df, fasta)
 
+    # locs specifies genome locations with one-indexing (like vcf),
+    # note that bed specifies genome locations with zero-indexing.
+    # Columns are name, pos, start, end, sequence, ref, and alt
+    args['locs'] = locs_df
+
+    # this may be broken (so maybe need to fix): if want to featurize custom fasta with deepsea, specify this
+
     deepsea_fasta = working_dir + 'locs_deepsea.fasta'
     if os.path.exists(deepsea_fasta):
         args['deepsea_sequence'] = read_fasta(deepsea_fasta)
-    args['locs'] = locs_df
+
+    # call featurization functions (run_*)
 
     for feature in features:
         if not os.path.exists(working_dir + feature + '.csv'):
@@ -113,7 +123,7 @@ def run_deepsea(working_dir, args):
         output_df = pd.read_csv(deepsea_output, index_col=0)
         output_df = args['locs'][Vcf_header].merge(delete_columns(output_df, ['name']), on=['chr', 'pos', 'ref', 'alt'], how='inner')
         delete_columns(output_df, ['chr', 'pos', 'ref', 'alt']).set_index('name', inplace=True)
-    output_df.loc[args['locs']['name']].to_csv(working_dir + 'deepsea.csv', float_format='%.5g')
+    output_df.reindex(index=args['locs']['name']).to_csv(working_dir + 'deepsea.csv', float_format='%.5g')
 
 def run_5mer(working_dir, args):
     k = 5
