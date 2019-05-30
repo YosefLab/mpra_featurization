@@ -15,6 +15,8 @@ def generate_features(features, working_dir, **args):
     fasta = working_dir + 'locs.fasta'
 
     has_vcf, has_bed, has_fasta = map(os.path.exists, [vcf, bed, fasta])
+    
+    assert has_vcf or has_bed or has_fasta, 'At least one of %s is required' % [vcf, bed, fasta]
 
     # generate bed from vcf / vcf_sequence_length if needed
     locs_df = pd.DataFrame()
