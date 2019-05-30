@@ -14,39 +14,38 @@ def generate_features(features, working_dir, **args):
     bed = working_dir + 'locs.bed'
     fasta = working_dir + 'locs.fasta'
 
+    has_vcf, has_bed, has_fasta = map(os.path.exists, [vcf, bed, fasta])
+
     # generate bed from vcf / vcf_sequence_length if needed
-
-    locs_df = read_vcf(vcf)
-    if os.path.exists(bed):
+    locs_df = pd.DataFrame()
+    if has_vcf:
+        locs_df[Vcf_header] = read_vcf(vcf)
+        if not has_bed:
+            assert 'vcf_sequence_length' in args, 'vcf_sequence_length must be specified as an argument if using vcf and no bed file is provided'
+            L = args['vcf_sequence_length']
+            # bed_pos = pos - 1; start = bed_pos - L // 2 + 1 = pos - L // 2; end = pos + L // 2
+            locs_df['start'] = locs_df['pos'] - L // 2
+            locs_df['end'] = locs_df['pos'] + L // 2
+            write_bed(locs_df, bed, columns=Bed_header_name)
+    if has_bed:
         bed_df = read_bed(bed)
-        locs_df[Bed_header] = bed_df[Bed_header]
-    else:
-        L = args.get('vcf_sequence_length', 200)
-        # bed_pos = pos - 1; start = bed_pos - L // 2 + 1 = pos - L // 2; end = pos + L // 2
-        locs_df['start'] = locs_df['pos'] - L // 2
-        locs_df['end'] = locs_df['pos'] + L // 2
-        write_bed(locs_df, bed, columns=Bed_header_name)
-
-    # generate fasta from bed if needed
-    if os.path.exists(fasta):
+        locs_df[Bed_header_name] = bed_df[Bed_header_name]
+    if has_fasta:
         fasta_df = read_fasta(fasta)
-        locs_df['sequence'] = fasta_df['sequence'].apply(str.upper)
-    else:
+        fasta_df['sequence'] = fasta_df['sequence'].apply(str.upper)
+        locs_df[Fasta_header] = fasta_df[Fasta_header]
+    elif has_bed or has_vcf:
         fasta_df = bed_df_to_fasta_df(locs_df)
         locs_df['sequence'] = fasta_df['sequence'].apply(str.upper)
-        locs_df['sequence'] = locs_df.apply(lambda row: substitute(row['sequence'], row['pos'] - row['start'] - 1, row['ref'], row['alt']), axis=1)
+        if has_vcf:
+            locs_df['sequence'] = locs_df.apply(lambda row: substitute(row['sequence'], (row['pos'] - 1) - row['start'], row['ref'], row['alt']), axis=1)
         write_fasta(locs_df, fasta)
-
-    # locs specifies genome locations with one-indexing (like vcf),
-    # note that bed specifies genome locations with zero-indexing.
+    
     # Columns are name, pos, start, end, sequence, ref, and alt
+    # Since vcf is one-indexed and bed is zero-indexed:
+    #   pos is one-indexed
+    #   start and end are zero-indexed
     args['locs'] = locs_df
-
-    # this may be broken (so maybe need to fix): if want to featurize custom fasta with deepsea, specify this
-
-    deepsea_fasta = working_dir + 'locs_deepsea.fasta'
-    if os.path.exists(deepsea_fasta):
-        args['deepsea_sequence'] = read_fasta(deepsea_fasta)
 
     # call featurization functions (run_*)
 
@@ -104,22 +103,51 @@ def submit_deepsea_(input_file, output_dir):
 
 def run_deepsea(working_dir, args):
     deepsea_dir = make_dir(working_dir + 'deepsea/')
-    if 'deepsea_sequence' in args:
+
+    vcf = working_dir + 'locs.vcf'
+    deepsea_bed = working_dir + 'locs_deepsea.bed'
+    deepsea_fasta = working_dir + 'locs_deepsea.fasta'
+    has_vcf, has_bed, has_fasta = map(os.path.exists, [vcf, deepsea_bed, deepsea_fasta])
+
+    if has_fasta: # submit fasta
+        fasta_df = read_fasta(deepsea_fasta)
         output_base = deepsea_dir + 'output_%s'
         def get_output_df_fasta(path):
             output_df = pd.read_csv(path, index_col=0)
             output_df['name'] = output_df['name'].apply(lambda x: x[1:])
             return output_df.set_index('name')
-        num_splits = split_fasta_(args['deepsea_sequence'], output_base + '.fasta', lambda N: (N - 1) // 2000 + 1)
+        num_splits = split_fasta_(fasta_df, output_base + '.fasta', lambda N: (N - 1) // 2000 + 1)
         input_fastas = [output_base % i + '.fasta' for i in range(num_splits)]
         output_dirs = [output_base % i + '/' for i in range(num_splits)]
         with ProcessPoolExecutor(max_workers=args['max_num_threads']) as executor:
             executor.map(submit_deepsea_, input_fastas, output_dirs)
         output_dfs = [get_output_df_fasta(output_dir + 'infile.fasta.out') for output_dir in output_dirs]
         output_df = pd.concat(output_dfs, axis=0)
-    else:
-        submit_deepsea_(working_dir + 'locs.vcf', deepsea_dir)
+    elif has_bed or not has_vcf: # submit bed
+        if has_bed:
+            in_file = deepsea_bed
+        else:
+            in_file = working_dir + 'locs.bed'
+        deepsea_output = deepsea_dir + 'infile.bed.out'
+        if not os.path.exists(deepsea_output):
+            submit_deepsea_(in_file, deepsea_dir)
+        else:
+            print('Using previously deepsea server output %s' % deepsea_output)
+        output_df = pd.read_csv(deepsea_output, index_col=0)
+        # deepsea does not return name if bed file is submitted, we have to determine the names ourselves by sorting all the average positions
+        output_df['center'] = (output_df['start'] + output_df['end']) / 2
+        locs_df = args['locs'].copy()
+        locs_df['center'] = (locs_df['start'] + locs_df['end']) / 2
+        output_df.sort_values(['chr', 'center'], inplace=True)
+        locs_sorted = locs_df.sort_values(['chr', 'center']).reset_index(drop=True)
+        output_df['name'] = locs_sorted['name']
+        delete_columns(output_df, Bed_header + ['center']).set_index('name', inplace=True)
+    else: # submit vcf
         deepsea_output = deepsea_dir + 'infile.vcf.out.alt'
+        if not os.path.exists(deepsea_output):
+            submit_deepsea_(vcf, deepsea_dir)
+        else:
+            print('Using previously deepsea server output %s' % deepsea_output)
         output_df = pd.read_csv(deepsea_output, index_col=0)
         output_df = args['locs'][Vcf_header].merge(delete_columns(output_df, ['name']), on=['chr', 'pos', 'ref', 'alt'], how='inner')
         delete_columns(output_df, ['chr', 'pos', 'ref', 'alt']).set_index('name', inplace=True)
